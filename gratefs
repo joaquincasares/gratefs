@@ -62,7 +62,7 @@ def main():
 
         # Read arguments
         if cli_loop:
-            command = raw_input('[grateFS] ')
+            command = raw_input('[grateFS:{0}] '.format(gratefs.pwd()[0]))
             arguments = ''
             if len(command.split()) > 1:
                 command, arguments = command.split(' ', 1)

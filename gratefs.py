@@ -109,7 +109,7 @@ def get_pwd():
 ##########################
 # Pipe code
 
-def open_pipe(dst):
+def open_pipe(dst, write_data=False, index=False):
     exe('{0} -mkdir {1}'.format(get_connection(), dst))
 
     stdout = ''
@@ -117,10 +117,19 @@ def open_pipe(dst):
     file_index = -1
     while True:
         try:
-            chunk = sys.stdin.read(8192)
+            if write_data:
+                chunk = write_data
+            else:
+                chunk = sys.stdin.read()
+
             time.sleep(0.1) # Allows the KeyboardInterrupt to be caught, otherwise it's lost in os.system()
             if len(chunk) != 0:
                 file_index += 1
+
+                # Allow for OpenFile to write fileparts
+                if index:
+                    file_index = index
+
                 chunk_file = 'part-{0}'.format(str(file_index).zfill(10))
                 chunk_dst = os.path.join(dst, chunk_file)
 
@@ -135,11 +144,16 @@ def open_pipe(dst):
                         stderr += 'pipe: {0}:\n{1}\n\n'.format(chunk_dst,stdpipe[1])
         except KeyboardInterrupt:
             break
+        if write_data:
+            break
     return stdout, stderr
 
-def closed_pipe(dst):
+def closed_pipe(dst, write_data=False):
     with tempfile.NamedTemporaryFile() as tmp_file:
-        tmp_file.write(sys.stdin.read())
+        if write_data:
+            tmp_file.write(write_data)
+        else:
+            tmp_file.write(sys.stdin.read())
         tmp_file.flush()
         return exe('{0} -put {1} {2}'.format(get_connection(), tmp_file.name, dst))
 
@@ -225,12 +239,36 @@ def openpipe(dst):
     dst = leading_directory(dst)
     return open_pipe(dst)
 
-def merge(dst, local_dst):
+def merge(dst, local_dst, always_overwrite=False):
     dst = leading_directory(dst)
-    if os.path.exists(local_dst) and raw_input('Do you wish to overwrite {0}? [y/N] '.format(local_dst)) != 'y':
+    if not always_overwrite and (os.path.exists(local_dst) and raw_input('Do you wish to overwrite {0}? [y/N] '.format(local_dst)) != 'y'):
         sys.stderr.write('File not overwritten!\n')
         sys.exit(1)
 
     stdout, stderr = exe('dse hadoop fs -cat {0}/*'.format(dst))
     open(local_dst, 'wb').write(stdout)
     return '', stderr
+
+# API specific
+class GrateFile:
+    def __init__(self, dst, index=0):
+        self.dst = dst
+        self.index = index - 1
+
+    def write(self, data):
+        self.index += 1
+        return open_pipe(self.dst, write_data=data, index=self.index)
+
+    def read(self):
+        return merge_and_read(self.dst)
+
+def write(dst, data):
+    return closed_pipe(dst, write_data=data)
+
+def read(src):
+    return cat(src)
+
+def merge_and_read(dst):
+    with tempfile.NamedTemporaryFile() as tmp_file:
+        stdout, stderr = merge(dst, tmp_file.name, always_overwrite=True)
+        return tmp_file.read(), stderr

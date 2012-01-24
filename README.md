@@ -88,18 +88,18 @@ Sample Run (Command Line Interface)
 ===================================
 
     host1:~/gratefs$ ./gratefs cli
-    [grateFS] get rbranson.pem .
+    [grateFS:/pem_files] get rbranson.pem .
     get: Target ./rbranson.pem already exists
-    [grateFS] get rbranson.pem rbranson.pem.bak
-    [grateFS] get zznate.pem zznate.pem.bak
-    [grateFS] cd
-    [grateFS] ls
+    [grateFS:/pem_files] get rbranson.pem rbranson.pem.bak
+    [grateFS:/pem_files] get zznate.pem zznate.pem.bak
+    [grateFS:/] cd
+    [grateFS:/] ls
     Found 3 items
     -rwxrwxrwx   1 ubuntu    ubuntu         14640 2012-01-20 22:04 /accountImage1.jpg
     drwxrwxrwx   - cassandra cassandra          0 2012-01-20 22:00 /tmp
     drwxrwxrwx   - ubuntu    ubuntu             0 2012-01-20 22:05 /pem_files
-    [grateFS] get /accountImage1.jpg accountImage1.jpg.bak
-    [grateFS] exit
+    [grateFS:/] get /accountImage1.jpg accountImage1.jpg.bak
+    [grateFS:/] exit
 
     host1:~/gratefs$ md5sum *
     1b51a397a6edcba81d06a71fb563d7a9  accountImage1.jpg
@@ -137,6 +137,42 @@ Sample Run (Pipes)
     3d78a089ccb22ee720ba064636d5ac25  zznate.pem
     3d78a089ccb22ee720ba064636d5ac25  zznate.pem.bak
     3d78a089ccb22ee720ba064636d5ac25  zznate.pem.bak2
+
+API Sample Run (Write/Read)
+===========================
+
+    host1:~/gratefs$ python
+    Python 2.6.6 (r266:84292, Sep 15 2010, 16:22:56) 
+    [GCC 4.4.5] on linux2
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> from gratefs import *
+    >>> write('/joaquin', 'My todo list:\n1.Learn easy_install\n2.Learn pip')
+    ('', '')
+    >>> print read('/joaquin')[0]
+    My todo list:
+    1.Learn easy_install
+    2.Learn pip
+    >>> gf = GrateFile('/numbers')
+    >>> gf.write('1\n')
+    ('', '')
+    >>> gf.write('2\n')
+    ('', '')
+    >>> gf.write('3\n')
+    ('', '')
+    >>> print gf.read()[0]
+    1
+    2
+    3
+    
+    >>> gf = GrateFile('/numbers', 3)
+    >>> gf.write('4\n')
+    ('', '')
+    >>> print merge_and_read('numbers')[0]
+    1
+    2
+    3
+    4
+    
 
 Known Errors
 ============
