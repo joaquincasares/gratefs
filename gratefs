@@ -1,0 +1,154 @@
+#!/usr/bin/env python
+
+import sys
+
+import gratefs
+
+def print_format(stdpipe):
+    stdout, stderr = stdpipe
+    if stdout:
+        print stdout.strip()
+    if stderr:
+        sys.stderr.write(stderr)
+
+def print_usage():
+    print "The general command line syntax is"
+    print "{0} command [commandOptions]".format(sys.argv[0])
+    print """
+    # Command line interface
+              cli
+
+    # File access
+              put <local_src> ... <dst>
+              get <src> <local_dst>
+              delete|rm <src> ...
+
+    # Inspection
+              list|ls [dst]
+              exists <src> ...
+              cat <src> ...
+              tail <src> ...
+
+    # Movement
+              mkdir <dst>
+              rmdir <dst>
+              cd [dst]
+              pwd
+
+    # Remote access
+              remote <host>:<port>
+              local
+
+    # Pipe access
+              pipe <dst>
+              openpipe <dst>
+              merge <dst> <local_dst>
+    """
+    print "Want more commands? Run `dse hadoop fs` for a complete list.\n"
+
+def main():
+
+    # Read command
+    command = None
+    if len(sys.argv) > 1:
+        command = sys.argv[1]
+
+    if command == 'cli':
+        cli_loop = True
+    else:
+        cli_loop = False
+
+    while True:
+
+        # Read arguments
+        if cli_loop:
+            command = raw_input('[grateFS] ')
+            arguments = ''
+            if len(command.split()) > 1:
+                command, arguments = command.split(' ', 1)
+                arguments = arguments.split(' ')
+            if not len(command.strip()):
+                continue
+        else:
+            arguments = sys.argv[2:]
+            
+
+        # File access
+        if command == 'put' and len(arguments) > 1:
+            print_format(gratefs.put(arguments[0:-1], arguments[-1]))
+
+        elif command == 'get' and len(arguments) > 1:
+            print_format(gratefs.get(arguments[0], arguments[1]))
+
+        elif (command == 'delete' or command == 'rm') and len(arguments):
+            print_format(gratefs.delete(arguments[0:]))
+
+
+        # Inspection
+        elif command == 'list' or command == 'ls':
+            src_list = arguments[0:] if len(arguments) else ''
+            print_format(gratefs.ls(src_list))
+
+        elif command == 'exists' and len(arguments):
+            print gratefs.exists(arguments[0:])
+
+        elif command == 'cat' and len(arguments):
+            print_format(gratefs.cat(arguments[0:]))
+
+        elif command == 'tail' and len(arguments):
+            print_format(gratefs.tail(arguments[0:]))
+
+
+        # Movement
+        elif command == 'mkdir' and len(arguments):
+            print_format(gratefs.mkdir(arguments[0]))
+
+        elif (command == 'rmdir' or command == 'rmr') and len(arguments):
+            print_format(gratefs.rmdir(arguments[0:]))
+
+        elif command == 'cd':
+            src = arguments[0] if len(arguments) else ''
+            print_format(gratefs.cd(src))
+
+        elif command == 'pwd':
+            print_format(gratefs.pwd())
+
+
+        # Remote access
+        elif command == 'remote' and len(arguments):
+            try:
+                host, port = arguments[0].split(':')
+            except:
+                sys.stderr.write('Format for remote should be <host>:<port>.\n')
+                sys.exit(1)
+            gratefs.remote(host, port)
+
+        elif command == 'local':
+            gratefs.local()
+
+
+        # Pipe access
+        elif command == 'pipe' and len(arguments):
+            print_format(gratefs.pipe(arguments[0]))
+
+        elif command == 'openpipe' and len(arguments):
+            print_format(gratefs.openpipe(arguments[0]))
+
+        elif command == 'merge' and len(arguments) > 1:
+            print_format(gratefs.merge(arguments[0], arguments[1]))
+
+
+        elif command == 'exit':
+            break
+
+        else:
+            print_usage()
+
+        if not cli_loop:
+            break
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print
